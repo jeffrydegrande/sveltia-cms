@@ -22,6 +22,7 @@
   import { selectAssetsView } from '$lib/services/contents/draft/editor';
   import { isSmallScreen } from '$lib/services/user/env';
   import { prefs } from '$lib/services/user/prefs';
+  import { getMediaLibraryOptions } from '$lib/services/assets/media-library';
 
   /**
    * @import {
@@ -64,7 +65,18 @@
     init,
     signIn,
     search,
+    upload,
   } = $derived(serviceProps);
+
+  // Get media library settings from configuration
+  const mediaLibrarySettings = $derived(() => {
+    if (serviceType === 'cloud_storage') {
+      const options = getMediaLibraryOptions({ libraryName: serviceId });
+      // R2 settings are under 'settings' property, not 'config'
+      return options?.settings || {};
+    }
+    return {};
+  });
 
   const input = $state({ userName: '', password: '' });
   let hasConfig = $state(true);
@@ -89,7 +101,13 @@
     searchResults = null;
 
     try {
-      searchResults = await search(query, { kind, apiKey, userName, password });
+      searchResults = await search(query, {
+        kind,
+        apiKey,
+        userName,
+        password,
+        settings: mediaLibrarySettings(),
+      });
     } catch (/** @type {any} */ ex) {
       error = 'search_fetch_failed';
       // eslint-disable-next-line no-console
@@ -198,7 +216,10 @@
                 if (files.length > 0 && serviceProps.upload) {
                   try {
                     // Upload the files
-                    const result = await serviceProps.upload(files, { apiKey, settings: {} });
+                    const result = await serviceProps.upload(files, {
+                      apiKey,
+                      settings: mediaLibrarySettings(),
+                    });
                     console.log('Upload successful:', result);
                     // Refresh the search results
                     searchAssets();
@@ -253,7 +274,10 @@
                 if (files.length > 0 && serviceProps.upload) {
                   try {
                     // Upload the files
-                    const result = await serviceProps.upload(files, { apiKey, settings: {} });
+                    const result = await serviceProps.upload(files, {
+                      apiKey,
+                      settings: mediaLibrarySettings(),
+                    });
                     console.log('Upload successful:', result);
                     // Refresh the search results
                     searchAssets();

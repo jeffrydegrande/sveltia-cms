@@ -109,6 +109,8 @@ words:
   - yacosta
   - zanhk
   - Zola
+  - cloudflarestorage
+  - AKIAIOSFODNN
 overrides:
   - language: en-gb
     filename: "**/*.md"

@@ -30,7 +30,7 @@ import {
  * @param {FileField | ImageField} [options.fieldConfig] Field configuration.
  * @returns {Record<string, any>} Options.
  */
-const getMediaLibraryOptions = ({ libraryName = 'default', fieldConfig } = {}) => {
+export const getMediaLibraryOptions = ({ libraryName = 'default', fieldConfig } = {}) => {
   const _siteConfig = get(siteConfig);
 
   return (

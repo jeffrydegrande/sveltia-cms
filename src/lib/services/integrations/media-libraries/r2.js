@@ -258,11 +258,11 @@ const generateUploadURL = async (apiKey, fileName, contentType, settings = {}) =
       throw new Error('Invalid API key format');
     }
 
-    // Settings with defaults
+    // Settings with defaults - prioritize settings over API key config
     const {
       publicPath = true,
-      customDomain = configCustomDomain || '',
-      pathPrefix = '',
+      customDomain = settings.customDomain || configCustomDomain || '',
+      pathPrefix = settings.pathPrefix || '',
     } = settings;
 
     // Prepare the file path with optional prefix
@@ -388,11 +388,11 @@ const search = async (query, { kind = 'image', apiKey, settings = {}, userName, 
       return Promise.reject(new Error('Invalid API key format'));
     }
 
-    // Settings with defaults - merge configuration settings with provided settings
+    // Settings with defaults - prioritize settings over API key config
     const {
       publicPath = true,
-      customDomain = configCustomDomain || '',
-      pathPrefix = '',
+      customDomain = settings.customDomain || configCustomDomain || '',
+      pathPrefix = settings.pathPrefix || '',
     } = settings;
 
     // Simple prefix filtering for R2 objects
@@ -415,83 +415,157 @@ const search = async (query, { kind = 'image', apiKey, settings = {}, userName, 
       // Use proper AWS Signature V4 authentication for listing objects
       console.log('Attempting authenticated S3 API request for listing objects...');
 
-      // Prepare query parameters for listing
-      /** @type {Record<string, string>} */
-      const listQueryParams = {
-        'list-type': '2',
+      // Function to fetch all objects using pagination
+      const fetchAllObjects = async () => {
+        const allObjects = [];
+        let continuationToken = null;
+        let requestCount = 0;
+        const maxRequests = 20; // Limit to prevent infinite loops (20 * 1000 = 20k files max)
+
+        do {
+          requestCount++;
+          console.log(`Fetching batch ${requestCount}...`);
+
+          // Prepare query parameters for this batch
+          /** @type {Record<string, string>} */
+          const batchQueryParams = {
+            'list-type': '2',
+            'max-keys': '1000',
+          };
+
+          // Add prefix parameter if needed (for date-based filtering)
+          if (prefixPath) {
+            batchQueryParams.prefix = prefixPath;
+          }
+
+          // Add continuation token for pagination
+          if (continuationToken) {
+            batchQueryParams['continuation-token'] = continuationToken;
+          }
+
+          // Get signed request for this batch
+          const signedRequest = await getSignedRequest({
+            method: 'GET',
+            region: region,
+            accessKeyId,
+            secretAccessKey: accessKeySecret,
+            accountId,
+            bucket: bucketName,
+            path: '',
+            queryParams: batchQueryParams,
+          });
+
+          console.log(`Making authenticated request ${requestCount} to:`, signedRequest.url);
+
+          const response = await fetch(signedRequest.url, {
+            method: 'GET',
+            headers: {
+              ...signedRequest.headers,
+            },
+            mode: 'cors',
+            credentials: 'omit',
+          });
+
+          if (!response.ok) {
+            console.error(`Batch ${requestCount} failed:`, response.status, response.statusText);
+            break;
+          }
+
+          // Parse this batch
+          const text = await response.text();
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(text, 'application/xml');
+
+          // Extract objects from this batch
+          const contents = Array.from(xmlDoc.getElementsByTagName('Contents'));
+          console.log(`Batch ${requestCount}: Found ${contents.length} objects`);
+
+          contents.forEach((content) => {
+            const key = content.getElementsByTagName('Key')[0]?.textContent;
+            const size = parseInt(content.getElementsByTagName('Size')[0]?.textContent || '0', 10);
+            const lastModified = new Date(
+              content.getElementsByTagName('LastModified')[0]?.textContent || '',
+            );
+
+            if (key && !(key.endsWith('/') && size === 0)) {
+              allObjects.push({ key, size, lastModified });
+            }
+          });
+
+          // Check if there are more objects to fetch
+          const isTruncated = xmlDoc.getElementsByTagName('IsTruncated')[0]?.textContent === 'true';
+          if (isTruncated) {
+            const nextToken = xmlDoc.getElementsByTagName('NextContinuationToken')[0]?.textContent;
+            continuationToken = nextToken;
+            console.log(
+              `More objects available, continuation token: ${nextToken?.substring(0, 20)}...`,
+            );
+          } else {
+            continuationToken = null;
+            console.log('All objects fetched');
+          }
+        } while (continuationToken && requestCount < maxRequests);
+
+        console.log(`Total objects fetched: ${allObjects.length} from ${requestCount} batches`);
+        return allObjects;
       };
 
-      // Add prefix parameter if needed
-      if (prefixPath) {
-        listQueryParams.prefix = prefixPath;
-      }
+      // Fetch all objects using pagination
+      const allRawObjects = await fetchAllObjects();
 
-      // Use authenticated request for listing (most R2 buckets require this)
-      console.log('Making authenticated S3 list request...');
-      
-      const region = bucketRegion === 'auto' ? 'us-east-1' : bucketRegion;
+      // Process the fetched objects into assets
+      console.log('Processing fetched objects into assets...');
 
-      const signedRequest = await getSignedRequest({
-        method: 'GET',
-        region: region,
-        accessKeyId,
-        secretAccessKey: accessKeySecret,
-        accountId,
-        bucket: bucketName,
-        path: '', // Use root path for listing
-        queryParams: listQueryParams,
-      });
+      /** @type {ExternalAsset[]} */
+      const assets = [];
 
-      console.log('Making authenticated request to:', signedRequest.url);
-      console.log('Request headers:', signedRequest.headers);
-      console.log('Account ID:', accountId);
-      console.log('Bucket Name:', bucketName);
-      console.log('Access Key ID:', accessKeyId);
-      console.log('Region:', region);
+      // Use the custom domain for URLs if specified, otherwise use the base URL
+      const urlBase = customDomain || baseUrl;
 
-      response = await fetch(signedRequest.url, {
-        method: 'GET',
-        headers: {
-          ...signedRequest.headers,
-        },
-        mode: 'cors',
-        credentials: 'omit',
-      });
+      allRawObjects.forEach(({ key, size, lastModified }) => {
+        // Extract filename (remove the prefix)
+        const fileName = key.replace(prefixPath, '');
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', [...response.headers.entries()]);
-
-      if (response.ok) {
-        console.log('Successfully listed objects');
-
-        // Use the custom domain for URLs if specified, otherwise use the base URL
-        const urlBase = customDomain || baseUrl;
-        return processListResponse(response, urlBase, prefixPath, searchPrefix);
-      } else {
-        console.warn('Listing failed:', response.status, response.statusText);
-
-        // Log response body for debugging
-        try {
-          const errorText = await response.text();
-          console.error('Error response body:', errorText);
-        } catch (e) {
-          console.error('Could not read error response body');
+        // Skip if we're filtering by prefix and the filename doesn't match
+        if (searchPrefix && !fileName.toLowerCase().includes(searchPrefix)) {
+          return;
         }
 
-        console.error('Cannot list objects from R2 bucket. This might be because:');
-        console.error('1. The bucket is private and requires authenticated requests');
-        console.error('2. The bucket does not exist or the domain is incorrect');
-        console.error('3. CORS is not properly configured on the bucket');
-        console.error('4. The S3 API is not enabled on the bucket');
-        console.error('5. Custom domain buckets often require authentication for listing');
-        console.error('Bucket URL attempted:', listUrl);
-        console.error('');
-        console.error('WORKAROUND: You can still upload files even if listing fails.');
-        console.error('The upload functionality will work independently of listing.');
+        // Determine file kind based on extension
+        const extension = fileName.split('.').pop()?.toLowerCase() || '';
+        /** @type {AssetKind} */
+        let fileKind = 'other';
 
-        // Return an empty array to show "No files found" but allow uploads
-        return [];
-      }
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
+          fileKind = 'image';
+        } else if (['mp4', 'webm', 'mov'].includes(extension)) {
+          fileKind = 'video';
+        } else if (['mp3', 'wav', 'ogg'].includes(extension)) {
+          fileKind = 'audio';
+        } else if (['pdf', 'doc', 'docx', 'txt'].includes(extension)) {
+          fileKind = 'document';
+        }
+
+        assets.push({
+          id: key,
+          description: fileName,
+          previewURL: fileKind === 'image' ? `${urlBase}/${key}` : '',
+          downloadURL: `${urlBase}/${key}`,
+          fileName,
+          kind: fileKind,
+          lastModified,
+          size,
+        });
+      });
+
+      // Sort assets by last modified date in reverse chronological order (newest first)
+      assets.sort((a, b) => {
+        // For files, sort by lastModified date (newest first)
+        return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+      });
+
+      console.log(`Processed ${assets.length} assets, returning newest first`);
+      return assets;
     } catch (error) {
       console.error('Error listing objects from R2:', error);
 
@@ -604,6 +678,16 @@ const processListResponse = async (response, baseUrl, prefixPath, searchPrefix) 
       }
     });
 
+    // Sort assets by last modified date in reverse chronological order (newest first)
+    assets.sort((a, b) => {
+      // Handle directories - put them at the top
+      if (a.kind === 'document' && b.kind !== 'document') return -1;
+      if (b.kind === 'document' && a.kind !== 'document') return 1;
+
+      // For files, sort by lastModified date (newest first)
+      return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+    });
+
     return assets;
   } catch (error) {
     console.error('Error processing list response:', error);
@@ -641,11 +725,11 @@ const upload = async (files, { apiKey, settings = {} }) => {
       return Promise.reject(new Error('Invalid API key format'));
     }
 
-    // Settings with defaults
+    // Settings with defaults - prioritize settings over API key config
     const {
       publicPath = true,
-      customDomain = configCustomDomain || '',
-      pathPrefix = '',
+      customDomain = settings.customDomain || configCustomDomain || '',
+      pathPrefix = settings.pathPrefix || '',
     } = settings;
 
     const baseUrl = customDomain || `https://${bucketName}.${accountId}.r2.cloudflarestorage.com`;
