@@ -1,5 +1,6 @@
 import pexels from './pexels';
 import pixabay from './pixabay';
+import r2 from './r2';
 import unsplash from './unsplash';
 
 /**
@@ -12,7 +13,7 @@ import unsplash from './unsplash';
  * @type {Record<string, MediaLibraryService>}
  */
 export const allCloudStorageServices = {
-  //
+  r2,
 };
 /**
  * List of all the supported stock asset providers.

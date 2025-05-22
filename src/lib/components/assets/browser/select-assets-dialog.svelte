@@ -155,7 +155,10 @@
       .map(([serviceId]) => serviceId)
       .includes(/** @type {StockAssetProviderName} */ (libraryName)) &&
       $prefs?.apiKeys?.[libraryName]) ||
-      (Object.keys(allCloudStorageServices).includes(libraryName) && $prefs?.logins?.[libraryName]),
+      (Object.keys(allCloudStorageServices).includes(libraryName) &&
+        (allCloudStorageServices[libraryName].authType === 'api_key'
+          ? $prefs?.apiKeys?.[libraryName]
+          : $prefs?.logins?.[libraryName])),
   );
   const enabledCloudServiceEntries = $derived(Object.entries(allCloudStorageServices));
   const enabledExternalServiceEntries = $derived([

@@ -509,7 +509,8 @@ Sveltia CMS has been built with a multilingual architecture from the very beginn
     - The `max_file_size` option for the File/Image widget can be defined within the global `media_library` option, using `default` as the library name. It applies to all File/Image entry fields, as well as direct uploads to the Asset Library. The option can also be part of the [new `media_libraries` option](#configuring-multiple-media-libraries).
   - Other integrations
     - Integrates stock photo providers, including Pexels, Pixabay and Unsplash.[^8] Developers can [disable them](#disabling-stock-assets) if needed.
-    - More integration options, including Amazon S3 and Cloudflare R2, would be added in the future.
+    - Supports Cloudflare R2 for asset storage and management. See [Configuring Cloudflare R2](#configuring-cloudflare-r2) for setup instructions.
+    - More integration options, including Amazon S3, would be added in the future.
 - The global `media_folder` can be an empty string (or `.` or `/`) if you want to store assets in the root folder.
 - PDF documents are displayed with a thumbnail image in both the Asset Library and the Select File dialog, making it easier to find the file you’re looking for.[^38]
 - Assets stored in an entry-relative media folder are displayed in the Asset Library.[^142]
@@ -1027,9 +1028,46 @@ media_libraries:
     settings:
       autoFilename: true
       defaultOperations: '/resize/800x600/'
+  r2:
+    config:
+      # For R2, you will need to set up API keys in the CMS UI
+    settings:
+      publicPath: true
+      customDomain: 'https://assets.example.com'
+      pathPrefix: 'cms-uploads'
 ```
 
 Note: Cloudinary and Uploadcare are not yet supported in Sveltia CMS.
+
+### Using Cloudflare R2 for asset storage
+
+Sveltia CMS supports Cloudflare R2 as a cloud storage option for your media assets. To configure R2 integration:
+
+1. Enable R2 in your configuration:
+
+```yaml
+media_libraries:
+  r2:
+    settings:
+      publicPath: true # Set to false if you want to use relative paths
+      customDomain: 'https://assets.example.com' # Optional custom domain
+      pathPrefix: 'cms-uploads' # Optional path prefix for all uploads
+```
+
+2. In the CMS interface, you'll need to provide your R2 credentials in the format:
+
+   ```
+   accountId:accessKeyId:accessKeySecret:bucketName[:bucketRegion][:customDomain]
+   ```
+
+   - `accountId`: Your Cloudflare account ID
+   - `accessKeyId`: R2 access key ID
+   - `accessKeySecret`: R2 access key secret
+   - `bucketName`: R2 bucket name
+   - `bucketRegion`: (Optional) R2 bucket region, defaults to 'auto'
+   - `customDomain`: (Optional) Custom domain for your R2 assets
+
+The custom domain can be specified either in the settings or as part of the credentials. If specified in both places, the one in the credentials takes precedence.
 
 ### Optimizing images for upload
 
@@ -1097,6 +1135,71 @@ collections:
 ```
 
 Note: The `root` option is ignored if the collection or collection file contains multiple fields. You can still have subfields under the List field.
+
+### Configuring Cloudflare R2
+
+Sveltia CMS supports Cloudflare R2 for asset storage and management. To set up R2 integration:
+
+1. **Create a Cloudflare R2 bucket**:
+
+   - Log in to your Cloudflare dashboard
+   - Navigate to R2 and create a new bucket
+   - Choose bucket access permissions:
+     - **Public bucket**: Configure the bucket for public access if you want the assets to be directly accessible without authentication
+     - **Private bucket**: For more security, keep the bucket private and use your API credentials for authenticated access
+
+2. **Set up CORS for your R2 bucket**:
+
+   - In the R2 bucket settings, navigate to the CORS configuration tab
+   - Add a CORS rule with the following settings:
+     - **Origin**: Enter your website's domain (e.g., `https://yourdomain.com`) or use `*` for testing
+     - **Allowed Methods**: Check `GET`, `PUT`, `POST`, and `HEAD`
+     - **Allowed Headers**: Add `Content-Type`, `Content-Length`, `Authorization`
+     - **Max Age**: `86400` (24 hours)
+     - **Allow Credentials**: `false`
+   - For bucket listing functionality to work, your bucket must be configured to allow public listing
+
+3. **Create API tokens**:
+
+   - Generate R2 API tokens with appropriate permissions (read/write)
+   - Make note of your Account ID, Access Key ID, and Access Key Secret
+
+4. **Configure Sveltia CMS**:
+   - Add R2 to your media libraries configuration:
+
+```yaml
+media_libraries:
+  - name: r2
+    config:
+      publicPath: true
+```
+
+5. **Enter credentials when prompted**:
+   - When accessing the R2 media library, you'll need to enter your credentials in the format:
+   - `accountId:accessKeyId:accessKeySecret:bucketName[:bucketRegion][:customDomain]`
+   - If using a custom domain for your bucket, include it as the last parameter
+   - Example: `abc123:AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY:my-bucket:auto:assets.example.com`
+
+The R2 integration allows you to browse, search, and upload assets directly to your Cloudflare R2 bucket.
+
+6. **Private vs Public Bucket Access**:
+
+   - **Public Bucket**:
+     - Easier to set up and requires less configuration
+     - Files are directly accessible via their URLs without authentication
+     - Less secure since anyone with the URL can access the files
+   - **Private Bucket**:
+     - More secure since files are not publicly accessible
+     - Requires proper API credentials with appropriate permissions
+     - For listing files in private buckets, your API tokens need read permissions
+     - For uploading files to private buckets, your API tokens need write permissions
+
+7. **Troubleshooting R2 Integration**:
+   - If you see SSL errors like `ERR_SSL_VERSION_OR_CIPHER_MISMATCH`, ensure your bucket URL is correct
+   - Make sure your bucket has proper CORS configuration
+   - For directory listing to work, either use API credentials or enable public listing
+   - If uploads fail, check that your API credentials have proper write permissions
+   - For private buckets, verify that your API tokens have the necessary permissions
 
 ### Changing the input type of a DateTime field
 

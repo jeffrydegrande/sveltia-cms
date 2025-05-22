@@ -153,9 +153,24 @@
  */
 
 /**
+ * Settings for the R2 media library.
+ * @typedef {object} R2MediaLibrarySettings
+ * @property {boolean} [publicPath] Whether to use a public URL path. Default: `true`.
+ * @property {string} [customDomain] Custom domain to use for URLs. Default: R2 domain.
+ * @property {string} [pathPrefix] Prefix to add to uploaded files. Default: empty string.
+ */
+
+/**
+ * Options for the Cloudflare R2 media library.
+ * @typedef {object} R2MediaLibrary
+ * @property {Record<string, any>} [config] Options to be passed to R2, such as `multiple`.
+ * @property {R2MediaLibrarySettings} [settings] Integration settings.
+ */
+
+/**
  * Supported media library.
  * @typedef {DefaultMediaLibrary | CloudinaryMediaLibrary | UploadcareMediaLibrary |
- * StockAssetMediaLibrary} MediaLibrary
+ * StockAssetMediaLibrary | R2MediaLibrary} MediaLibrary
  * @see https://decapcms.org/docs/configuration-options/#media-library
  */
 
@@ -165,6 +180,7 @@
  * @property {DefaultMediaLibrary} [default] Options for the default media library.
  * @property {CloudinaryMediaLibrary} [cloudinary] Options for the Cloudinary media library.
  * @property {UploadcareMediaLibrary} [uploadcare] Options for the Uploadcare media library.
+ * @property {R2MediaLibrary} [r2] Options for the Cloudflare R2 media library.
  * @property {StockAssetMediaLibrary} [stock_assets] Options for the unified stock photo/video media
  * library.
  */

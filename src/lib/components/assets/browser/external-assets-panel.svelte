@@ -7,6 +7,7 @@
   import {
     Button,
     EmptyState,
+    Icon,
     InfiniteScroll,
     Option,
     PasswordInput,
@@ -174,37 +175,150 @@
     </EmptyState>
   {:else if !searchResults.length}
     <EmptyState>
-      <span role="alert">{$_('no_files_found')}</span>
+      <div role="none" class="empty-state-container">
+        <span role="alert">{$_('no_files_found')}</span>
+
+        {#if serviceType === 'cloud_storage'}
+          <Button
+            variant="primary"
+            label={$_('upload_assets')}
+            onclick={() => {
+              // Create a file input element
+              const fileInput = document.createElement('input');
+              fileInput.type = 'file';
+              fileInput.multiple = true;
+
+              // Handle file selection
+              fileInput.onchange = async (event) => {
+                if (!event.target || !('files' in event.target)) return;
+
+                const inputElement = /** @type {HTMLInputElement} */ (event.target);
+                const files = Array.from(inputElement.files || []);
+
+                if (files.length > 0 && serviceProps.upload) {
+                  try {
+                    // Upload the files
+                    const result = await serviceProps.upload(files, { apiKey, settings: {} });
+                    console.log('Upload successful:', result);
+                    // Refresh the search results
+                    searchAssets();
+                  } catch (err) {
+                    console.error('Upload failed:', err);
+                    if (
+                      err.message &&
+                      (err.message.includes('CORS') || err.message.includes('Access to fetch'))
+                    ) {
+                      error = 'cors_error';
+                      console.error(
+                        'CORS Error: Make sure your R2 bucket has CORS configured for localhost:1313',
+                      );
+                    } else {
+                      error = 'upload_failed';
+                    }
+                  }
+                }
+              };
+
+              // Trigger file selection dialog
+              fileInput.click();
+            }}
+          >
+            {#snippet startIcon()}
+              <Icon name="cloud_upload" />
+            {/snippet}
+          </Button>
+        {/if}
+      </div>
     </EmptyState>
   {:else}
-    <SimpleImageGrid
-      {gridId}
-      viewType={$selectAssetsView?.type}
-      onChange={({ value }) => {
-        const asset = searchResults?.find(({ id }) => id === value);
+    <div role="none" class="grid-with-toolbar">
+      {#if serviceType === 'cloud_storage'}
+        <div role="none" class="toolbar">
+          <Button
+            variant="primary"
+            label={$_('upload_assets')}
+            onclick={() => {
+              // Create a file input element
+              const fileInput = document.createElement('input');
+              fileInput.type = 'file';
+              fileInput.multiple = true;
 
-        if (asset) {
-          selectAsset(asset);
-        }
-      }}
-    >
-      <InfiniteScroll items={searchResults} itemKey="id">
-        {#snippet renderItem(/** @type {ExternalAsset} */ asset)}
-          {#await sleep() then}
-            {@const { id, previewURL, description, kind: _kind } = asset}
-            <Option label="" value={id}>
-              {#snippet checkIcon()}
-                <!-- Remove check icon -->
-              {/snippet}
-              <AssetPreview kind={_kind} src={previewURL} variant="tile" crossorigin="anonymous" />
-              {#if !$isSmallScreen || $selectAssetsView?.type === 'list'}
-                <span role="none" class="name">{description}</span>
-              {/if}
-            </Option>
-          {/await}
-        {/snippet}
-      </InfiniteScroll>
-    </SimpleImageGrid>
+              // Handle file selection
+              fileInput.onchange = async (event) => {
+                if (!event.target || !('files' in event.target)) return;
+
+                const inputElement = /** @type {HTMLInputElement} */ (event.target);
+                const files = Array.from(inputElement.files || []);
+
+                if (files.length > 0 && serviceProps.upload) {
+                  try {
+                    // Upload the files
+                    const result = await serviceProps.upload(files, { apiKey, settings: {} });
+                    console.log('Upload successful:', result);
+                    // Refresh the search results
+                    searchAssets();
+                  } catch (err) {
+                    console.error('Upload failed:', err);
+                    if (
+                      err.message &&
+                      (err.message.includes('CORS') || err.message.includes('Access to fetch'))
+                    ) {
+                      error = 'cors_error';
+                      console.error(
+                        'CORS Error: Make sure your R2 bucket has CORS configured for localhost:1313',
+                      );
+                    } else {
+                      error = 'upload_failed';
+                    }
+                  }
+                }
+              };
+
+              // Trigger file selection dialog
+              fileInput.click();
+            }}
+          >
+            {#snippet startIcon()}
+              <Icon name="cloud_upload" />
+            {/snippet}
+          </Button>
+        </div>
+      {/if}
+
+      <SimpleImageGrid
+        {gridId}
+        viewType={$selectAssetsView?.type}
+        onChange={({ value }) => {
+          const asset = searchResults?.find(({ id }) => id === value);
+
+          if (asset) {
+            selectAsset(asset);
+          }
+        }}
+      >
+        <InfiniteScroll items={searchResults} itemKey="id">
+          {#snippet renderItem(/** @type {ExternalAsset} */ asset)}
+            {#await sleep() then}
+              {@const { id, previewURL, description, kind: _kind } = asset}
+              <Option label="" value={id}>
+                {#snippet checkIcon()}
+                  <!-- Remove check icon -->
+                {/snippet}
+                <AssetPreview
+                  kind={_kind}
+                  src={previewURL}
+                  variant="tile"
+                  crossorigin="anonymous"
+                />
+                {#if !$isSmallScreen || $selectAssetsView?.type === 'list'}
+                  <span role="none" class="name">{description}</span>
+                {/if}
+              </Option>
+            {/await}
+          {/snippet}
+        </InfiniteScroll>
+      </SimpleImageGrid>
+    </div>
   {/if}
 {:else if hasConfig}
   <EmptyState>
@@ -312,5 +426,25 @@
     width: 400px;
     max-width: 100%;
     text-align: center;
+  }
+
+  .empty-state-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .grid-with-toolbar {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .toolbar {
+    padding: 8px;
+    border-bottom: 1px solid var(--sui-border-color);
+    display: flex;
+    justify-content: flex-end;
   }
 </style>

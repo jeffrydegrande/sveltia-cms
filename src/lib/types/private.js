@@ -146,11 +146,13 @@
  * @property {string} [developerURL] URL of the page that provides the API/developer service.
  * @property {string} [apiKeyURL] URL of the page that provides an API key.
  * @property {RegExp} [apiKeyPattern] API key pattern.
+ * @property {string} [apiKeyHelp] Help text for the API key format.
  * @property {() => Promise<boolean>} [init] Function to initialize the service.
  * @property {(userName: string, password: string) => Promise<boolean>} [signIn] Function to sign in
  * to the service.
  * @property {(query: string, options: { kind?: string, apiKey: string, userName?: string,
  * password?: string }) => Promise<ExternalAsset[]>} search Function to search files.
+ * @property {(files: File[], options: { apiKey: string, settings?: object }) => Promise<ExternalAsset[]>} [upload] Function to upload files.
  */
 
 /**
