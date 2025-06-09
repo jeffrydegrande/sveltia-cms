@@ -9,6 +9,7 @@
   import { getEntryThumbnail } from '$lib/services/contents/entry/assets';
   import { getEntrySummary } from '$lib/services/contents/entry/summary';
   import { isMediumScreen, isSmallScreen } from '$lib/services/user/env';
+  import { getPropertyValue } from '$lib/services/contents/entry/fields';
 
   /**
    * @import { Entry, EntryCollection, ViewType } from '$lib/types/private';
@@ -29,6 +30,21 @@
     viewType,
     /* eslint-enable prefer-const */
   } = $props();
+
+  const isDraft = $derived(() => {
+    const {
+      name: collectionName,
+      _i18n: { defaultLocale: locale },
+    } = collection;
+    const draftValue = getPropertyValue({
+      entry,
+      locale,
+      collectionName,
+      key: 'draft',
+      resolveRef: false,
+    });
+    return draftValue === true;
+  });
 
   /**
    * Update the entry selection.
@@ -93,12 +109,19 @@
           <Icon name="home" class="home" />
         {/if}
       </TruncatedText>
+      {#if isDraft()}
+        <span class="draft-badge">DRAFT</span>
+      {/if}
     </div>
   </GridCell>
 </GridRow>
 
 <style lang="scss">
   .label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
     :global {
       .icon.home {
         opacity: 0.5;
@@ -106,5 +129,18 @@
         vertical-align: -4px;
       }
     }
+  }
+
+  .draft-badge {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: var(--warning-bg-color, #fef3c7);
+    color: var(--warning-text-color, #92400e);
+    border: 1px solid var(--warning-border-color, #fcd34d);
   }
 </style>

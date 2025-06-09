@@ -156,12 +156,13 @@ const filterEntries = (entries, collection, filters) => {
     _i18n: { defaultLocale: locale },
   } = collection;
 
-  // Ignore invalid filters
+  // Ignore invalid filters, but always allow draft field
   const validFilters = filters.filter(
     ({ field, pattern }) =>
       field !== undefined &&
       pattern !== undefined &&
-      configuredFilters.some((f) => f.field === field && f.pattern === pattern),
+      (field === 'draft' ||
+        configuredFilters.some((f) => f.field === field && f.pattern === pattern)),
   );
 
   return entries.filter((entry) =>
@@ -171,6 +172,11 @@ const filterEntries = (entries, collection, filters) => {
       const rawValue = getPropertyValue({ ...args, resolveRef: false });
       const refValue = getPropertyValue({ ...args });
       const regex = typeof pattern === 'string' ? new RegExp(pattern) : undefined;
+
+      // Special handling for draft field: undefined means published (false)
+      if (field === 'draft' && rawValue === undefined && refValue === undefined) {
+        return pattern === false;
+      }
 
       if (rawValue === undefined || refValue === undefined) {
         return false;
@@ -410,7 +416,10 @@ export const entryGroups = derived(
     } else {
       entries = sortEntries(entries, collection, _currentView.sort);
 
-      if (_currentView.filters) {
+      // Handle both single filter and multiple filters
+      if (_currentView.filter) {
+        entries = filterEntries(entries, collection, [_currentView.filter]);
+      } else if (_currentView.filters) {
         entries = filterEntries(entries, collection, _currentView.filters);
       }
 

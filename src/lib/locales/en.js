@@ -196,6 +196,11 @@ export const strings = {
   descending_date: '{label}, new to old',
   filter: 'Filter',
   filtering_options: 'Filtering Options',
+  status: 'Status',
+  post_status: 'Status',
+  all_posts: 'All Posts',
+  draft_posts: 'Draft Posts',
+  published_posts: 'Published Posts',
   group: 'Group', // Verb
   grouping_options: 'Grouping Options',
   type: 'Type',

@@ -30,6 +30,12 @@
   const thumbnailFieldNames = $derived(entryCollection?._thumbnailFieldNames ?? []);
   const hasListedEntries = $derived(!!$listedEntries.length);
   const hasMultipleEntries = $derived($listedEntries.length > 1);
+
+  // Create draft filters
+  const draftFilters = $derived([
+    { label: $_('draft_posts'), field: 'draft', pattern: true },
+    { label: $_('published_posts'), field: 'draft', pattern: false },
+  ]);
 </script>
 
 {#if entryCollection}
@@ -46,6 +52,15 @@
       {currentView}
       fields={$sortFields}
       {collectionName}
+      aria-controls="entry-list"
+    />
+    <FilterMenu
+      disabled={!hasMultipleEntries}
+      {currentView}
+      filters={draftFilters}
+      label={$_('post_status')}
+      noneLabel={$_('all_posts')}
+      multiple={false}
       aria-controls="entry-list"
     />
     {#if entryCollection.view_filters?.length}
