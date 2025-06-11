@@ -49,7 +49,7 @@
   {#if !($isSmallScreen || $isMediumScreen)}
     <PreviewAssetButton asset={$focusedAsset} />
     <CarouselButton {assets} />
-    <CopyAssetsButton assets={$focusedAsset ? [$focusedAsset] : []} />
+    <CopyAssetsButton {assets} />
     <DownloadAssetsButton {assets} />
     <DeleteAssetsButton
       {assets}

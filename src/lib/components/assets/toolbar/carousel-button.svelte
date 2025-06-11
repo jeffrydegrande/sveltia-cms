@@ -30,6 +30,16 @@
   const imageAssets = $derived(assets.filter(asset => asset.kind === 'image'));
   const hasEnoughImages = $derived(imageAssets.length >= 2);
 
+  // Debug logging
+  $effect(() => {
+    console.log('Carousel Debug:', {
+      totalAssets: assets.length,
+      imageAssets: imageAssets.length,
+      hasEnoughImages,
+      assetKinds: assets.map(a => ({ name: a.name, kind: a.kind }))
+    });
+  });
+
   /**
    * Generate carousel code from selected image assets.
    * @returns {Promise<string>} Generated carousel code.
