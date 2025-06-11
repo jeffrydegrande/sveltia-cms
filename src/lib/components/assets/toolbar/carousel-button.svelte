@@ -23,12 +23,12 @@
 
   /** @type {{ show: boolean, text: string, status: 'success' | 'error' }} */
   const toast = $state({ show: false, text: '', status: 'success' });
-  let showDialog = $state(false);
+  let dialogOpen = $state(false);
   let carouselCode = $state('');
 
-  // Filter to only include image assets
+  // Use derived values like the original working version
   const imageAssets = $derived(assets.filter(asset => asset.kind === 'image'));
-  const hasEnoughImages = $derived(imageAssets.length >= 2);
+  const hasImages = $derived(imageAssets.length > 0);
 
   /**
    * Generate carousel code from selected image assets.
@@ -52,7 +52,7 @@
    * Handle carousel button click.
    */
   const handleCarouselClick = async () => {
-    if (!hasEnoughImages) {
+    if (!hasImages) {
       toast.status = 'error';
       toast.text = $_('carousel_no_images');
       toast.show = true;
@@ -61,7 +61,7 @@
 
     try {
       carouselCode = await generateCarouselCode();
-      showDialog = true;
+      dialogOpen = true;
     } catch (error) {
       toast.status = 'error';
       toast.text = $_('carousel_generation_error');
@@ -78,7 +78,7 @@
       toast.status = 'success';
       toast.text = $_('carousel_code_copied');
       toast.show = true;
-      showDialog = false;
+      dialogOpen = false;
     } catch (error) {
       toast.status = 'error';
       toast.text = $_('clipboard_error');
@@ -90,7 +90,7 @@
 {#if useButton}
   <Button
     variant="ghost"
-    disabled={!hasEnoughImages}
+    disabled={!hasImages}
     label={$_('carousel')}
     onclick={handleCarouselClick}
   />
@@ -98,34 +98,25 @@
   <!-- Menu item version for overflow menus -->
   <button
     type="button"
-    disabled={!hasEnoughImages}
+    disabled={!hasImages}
     onclick={handleCarouselClick}
   >
     {$_('carousel')}
   </button>
 {/if}
 
-{#if showDialog}
-  <Dialog
-    title={$_('carousel_dialog_title')}
-    onclose={() => { showDialog = false; }}
-  >
-    {#snippet contents()}
-      <div class="carousel-code-container">
-        <div class="code-block">
-          <pre><code>{carouselCode}</code></pre>
-        </div>
-        <div class="copy-button-container">
-          <Button
-            variant="primary"
-            label={$_('copy')}
-            onclick={copyCarouselCode}
-          />
-        </div>
-      </div>
-    {/snippet}
-  </Dialog>
-{/if}
+<Dialog
+  title={$_('carousel_dialog_title')}
+  bind:open={dialogOpen}
+  onOk={copyCarouselCode}
+  okLabel={$_('copy')}
+>
+  <div class="carousel-code-container">
+    <div class="code-block">
+      <pre><code>{carouselCode}</code></pre>
+    </div>
+  </div>
+</Dialog>
 
 <Toast bind:show={toast.show}>
   <Alert status={toast.status}>{toast.text}</Alert>

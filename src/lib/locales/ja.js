@@ -336,7 +336,7 @@ export const strings = {
   asset_data_copied: 'アセットファイルがクリップボードにコピーされました。',
   carousel_dialog_title: 'カルーセルコード',
   carousel_code_copied: 'カルーセルコードがクリップボードにコピーされました。',
-  carousel_no_images: 'カルーセルを作成するには、少なくとも2つの画像を選択してください。',
+  carousel_no_images: 'カルーセルを作成するには、少なくとも1つの画像を選択してください。',
   carousel_generation_error: 'カルーセルコードの生成中にエラーが発生しました。',
   asset_downloaded: 'アセットファイルがダウンロードされました。',
   assets_downloaded: 'アセットファイルがダウンロードされました。',

@@ -337,7 +337,7 @@ export const strings = {
   asset_data_copied: 'Asset file has been copied to clipboard.',
   carousel_dialog_title: 'Carousel Code',
   carousel_code_copied: 'Carousel code has been copied to clipboard.',
-  carousel_no_images: 'Please select at least 2 images to create a carousel.',
+  carousel_no_images: 'Please select at least 1 image to create a carousel.',
   carousel_generation_error: 'There was an error generating the carousel code.',
   asset_downloaded: 'Asset file has been downloaded.',
   assets_downloaded: 'Asset files have been downloaded.',
