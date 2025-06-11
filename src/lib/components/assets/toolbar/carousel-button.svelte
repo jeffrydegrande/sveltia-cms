@@ -24,17 +24,15 @@
   /** @type {{ show: boolean, text: string, status: 'success' | 'error' }} */
   const toast = $state({ show: false, text: '', status: 'success' });
   let dialogOpen = $state(false);
-  let carouselCode = $state('');
 
   // Use derived values like the original working version
   const imageAssets = $derived(assets.filter(asset => asset.kind === 'image'));
   const hasImages = $derived(imageAssets.length > 0);
-
-  /**
-   * Generate carousel code from selected image assets.
-   * @returns {Promise<string>} Generated carousel code.
-   */
-  const generateCarouselCode = async () => {
+  
+  // Make carousel code reactive to current selection
+  const carouselCode = $derived.by(() => {
+    if (!hasImages) return '';
+    
     const lines = ['{{< carousel >}}'];
     
     // eslint-disable-next-line no-restricted-syntax
@@ -48,12 +46,12 @@
     
     lines.push('{{< /carousel >}}');
     return lines.join('\n');
-  };
+  });
 
   /**
    * Handle carousel button click.
    */
-  const handleCarouselClick = async () => {
+  const handleCarouselClick = () => {
     if (!hasImages) {
       toast.status = 'error';
       toast.text = $_('carousel_no_images');
@@ -61,20 +59,20 @@
       return;
     }
 
-    try {
-      carouselCode = await generateCarouselCode();
-      dialogOpen = true;
-    } catch (error) {
-      toast.status = 'error';
-      toast.text = $_('carousel_generation_error');
-      toast.show = true;
-    }
+    dialogOpen = true;
   };
 
   /**
    * Copy carousel code to clipboard.
    */
   const copyCarouselCode = async () => {
+    if (!carouselCode) {
+      toast.status = 'error';
+      toast.text = $_('carousel_generation_error');
+      toast.show = true;
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(carouselCode);
       toast.status = 'success';

@@ -1,25 +1,23 @@
 /* eslint-disable no-await-in-loop */
 
-import { getBase64 } from '@sveltia/utils/file';
-import { sleep } from '@sveltia/utils/misc';
-
 /**
- * Generate a SHA256 hash of a string using the Web Crypto API
- * @param {string} message The message to hash
- * @returns {Promise<string>} Hex-encoded hash
+ * Generate a SHA256 hash of a string using the Web Crypto API.
+ * @param {string} message The message to hash.
+ * @returns {Promise<string>} Hex-encoded hash.
  */
 const sha256 = async (message) => {
   const msgBuffer = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
+
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 };
 
 /**
- * Generate HMAC-SHA256 signature using Web Crypto API
- * @param {string | ArrayBuffer} key The key for HMAC
- * @param {string} message The message to sign
- * @returns {Promise<ArrayBuffer>} The HMAC signature
+ * Generate HMAC-SHA256 signature using Web Crypto API.
+ * @param {string | ArrayBuffer} key The key for HMAC.
+ * @param {string} message The message to sign.
+ * @returns {Promise<ArrayBuffer>} The HMAC signature.
  */
 const hmacSha256 = async (key, message) => {
   const encoder = new TextEncoder();
@@ -43,29 +41,26 @@ const hmacSha256 = async (key, message) => {
 };
 
 /**
- * Convert ArrayBuffer to hex string
- * @param {ArrayBuffer} buffer The buffer to convert
- * @returns {string} Hex string
+ * Convert ArrayBuffer to hex string.
+ * @param {ArrayBuffer} buffer The buffer to convert.
+ * @returns {string} Hex string.
  */
-const bufferToHex = (buffer) => {
-  return Array.from(new Uint8Array(buffer))
+const bufferToHex = (buffer) => Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
-};
 
 /**
  * Generate AWS Signature V4 for Cloudflare R2 API requests.
  * This is a proper implementation that works for S3-compatible API operations.
- *
- * @param {object} options Options for signature generation
- * @param {string} options.method HTTP method (GET, PUT, POST, etc.)
- * @param {string} options.region AWS region (use 'auto' for R2)
- * @param {string} options.accessKeyId AWS access key ID
- * @param {string} options.secretAccessKey AWS secret access key
- * @param {string} options.accountId Account ID for R2
- * @param {string} options.bucket Bucket name
- * @param {string} options.path Path within the bucket (without leading slash)
- * @param {Record<string, string>} [options.headers={}] Request headers
+ * @param {object} options Options for signature generation.
+ * @param {string} options.method HTTP method (GET, PUT, POST, etc.).
+ * @param {string} options.region AWS region (use 'auto' for R2).
+ * @param {string} options.accessKeyId AWS access key ID.
+ * @param {string} options.secretAccessKey AWS secret access key.
+ * @param {string} options.accountId Account ID for R2.
+ * @param {string} options.bucket Bucket name.
+ * @param {string} options.path Path within the bucket (without leading slash).
+ * @param {Record<string, string>} [options.headers={}] Request headers.
  * @param {Record<string, string>} [options.queryParams={}] Query parameters
  * @param {string} [options.service='s3'] AWS service (use 's3' for R2)
  * @param {Date} [options.date=new Date()] Request date
@@ -91,7 +86,6 @@ const getSignedRequest = async (options) => {
   // Format date strings needed for the request
   const amzDate = date.toISOString().replace(/[:-]|\.\d{3}/g, '');
   const dateStamp = amzDate.substring(0, 8);
-
   // Prepare the canonical request
   // For path-style addressing, the canonical URI includes the bucket name
   // For listing operations (when path is empty), we need to add a trailing slash
@@ -106,10 +100,12 @@ const getSignedRequest = async (options) => {
         /[!'()*]/g,
         (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
       );
+
       const encodedValue = encodeURIComponent(queryParams[key]).replace(
         /[!'()*]/g,
         (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
       );
+
       return `${encodedKey}=${encodedValue}`;
     })
     .join('&');
@@ -133,6 +129,7 @@ const getSignedRequest = async (options) => {
       // AWS requires specific header formatting: lowercase key, single space after colon, trimmed value
       const lowerKey = key.toLowerCase();
       const trimmedValue = allHeaders[key].toString().trim().replace(/\s+/g, ' ');
+
       return `${lowerKey}:${trimmedValue}\n`;
     })
     .join('');
@@ -188,12 +185,14 @@ const getSignedRequest = async (options) => {
 
   // Construct the final URL using path-style addressing
   let url = `https://${accountId}.r2.cloudflarestorage.com/${bucket}`;
+
   if (path) {
     url += `/${path}`;
   } else {
     // For listing operations, add trailing slash
     url += '/';
   }
+
   if (canonicalQueryString) {
     url += `?${canonicalQueryString}`;
   }
@@ -225,22 +224,21 @@ const getSignedRequest = async (options) => {
  * Initialize the R2 service.
  * @returns {Promise<boolean>} Whether the service is configured properly.
  */
-const init = async () => {
+const init = async () => 
   // R2 service initialization can be performed here if needed
   // For now, returning true as configuration is done through API keys
-  return true;
-};
+   true
+;
 
 /**
  * Generate authenticated upload details for R2.
- *
  * @param {string} apiKey Combined credentials in format "accountId:accessKeyId:accessKeySecret:bucketName:bucketRegion:customDomain".
  * @param {string} fileName Name of the file to upload.
  * @param {string} contentType MIME type of the file.
  * @param {object} [settings] Optional R2 media library settings.
- * @param {boolean} [settings.publicPath=true] Whether to use a public URL path.
+ * @param {boolean} [settings.publicPath] Whether to use a public URL path.
  * @param {string} [settings.customDomain] Custom domain to use for URLs.
- * @param {string} [settings.pathPrefix=''] Prefix to add to uploaded files.
+ * @param {string} [settings.pathPrefix] Prefix to add to uploaded files.
  * @returns {Promise<{uploadURL: string, publicURL: string, headers: Record<string, string>}>} Upload details.
  */
 const generateUploadURL = async (apiKey, fileName, contentType, settings = {}) => {
@@ -299,7 +297,6 @@ const generateUploadURL = async (apiKey, fileName, contentType, settings = {}) =
 
 /**
  * Upload a file to R2 using authenticated request.
- *
  * @param {string} uploadURL Signed URL for uploading.
  * @param {File} file File to upload.
  * @param {Record<string, string>} headers Authentication headers.
@@ -319,7 +316,7 @@ const uploadFile = async (uploadURL, file, headers) => {
 
     // Remove any headers that might cause CORS preflight issues
     // The Authorization header is already included in the signed headers
-    delete requestHeaders['Host']; // Browser will set this automatically
+    delete requestHeaders.Host; // Browser will set this automatically
 
     console.log('Final request headers:', requestHeaders);
 
@@ -334,15 +331,17 @@ const uploadFile = async (uploadURL, file, headers) => {
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
+
       console.error('Upload response:', response.status, response.statusText, errorText);
       console.error('Response headers:', [...response.headers.entries()]);
       throw new Error(`Upload failed with status ${response.status}: ${response.statusText}`);
     }
 
     console.log('File uploaded successfully');
-    return;
+    
   } catch (error) {
     console.error('Error uploading file:', error);
+
     if (error.message && error.message.includes('CORS')) {
       console.error('CORS Error Details:');
       console.error(
@@ -351,6 +350,7 @@ const uploadFile = async (uploadURL, file, headers) => {
       console.error('- The CORS configuration should allow PUT method and the required headers');
       console.error('- Check Cloudflare R2 dashboard > Your Bucket > Settings > CORS policy');
     }
+
     throw error;
   }
 };
@@ -359,17 +359,14 @@ const uploadFile = async (uploadURL, file, headers) => {
  * Search files in the R2 bucket.
  * @param {string} query Search query.
  * @param {object} options Options.
- * @param {string} [options.kind] Asset kind.
  * @param {string} options.apiKey Combined credentials in format "accountId:accessKeyId:accessKeySecret:bucketName:bucketRegion:customDomain".
  * @param {object} [options.settings] Optional R2 media library settings.
- * @param {boolean} [options.settings.publicPath=true] Whether to use a public URL path.
+ * @param {boolean} [options.settings.publicPath] Whether to use a public URL path.
  * @param {string} [options.settings.customDomain] Custom domain to use for URLs.
- * @param {string} [options.settings.pathPrefix=''] Prefix to add to uploaded files.
- * @param {string} [options.userName] Unused for R2, kept for compatibility.
- * @param {string} [options.password] Unused for R2, kept for compatibility.
+ * @param {string} [options.settings.pathPrefix] Prefix to add to uploaded files.
  * @returns {Promise<ExternalAsset[]>} Assets.
  */
-const search = async (query, { kind = 'image', apiKey, settings = {}, userName, password }) => {
+const search = async (query, { apiKey, settings = {} }) => {
   if (!apiKey) {
     return Promise.reject(new Error('API key is required'));
   }
@@ -397,7 +394,6 @@ const search = async (query, { kind = 'image', apiKey, settings = {}, userName, 
 
     // Simple prefix filtering for R2 objects
     const searchPrefix = query ? query.toLowerCase() : '';
-
     // Apply path prefix if any
     const prefixPath = pathPrefix ? `${pathPrefix.replace(/\/$/, '')}/` : '';
 
@@ -416,6 +412,9 @@ const search = async (query, { kind = 'image', apiKey, settings = {}, userName, 
       console.log('Attempting authenticated S3 API request for listing objects...');
 
       // Function to fetch all objects using pagination
+      /**
+       *
+       */
       const fetchAllObjects = async () => {
         const allObjects = [];
         let continuationToken = null;
@@ -446,7 +445,7 @@ const search = async (query, { kind = 'image', apiKey, settings = {}, userName, 
           // Get signed request for this batch
           const signedRequest = await getSignedRequest({
             method: 'GET',
-            region: region,
+            region,
             accessKeyId,
             secretAccessKey: accessKeySecret,
             accountId,
@@ -475,14 +474,15 @@ const search = async (query, { kind = 'image', apiKey, settings = {}, userName, 
           const text = await response.text();
           const parser = new DOMParser();
           const xmlDoc = parser.parseFromString(text, 'application/xml');
-
           // Extract objects from this batch
           const contents = Array.from(xmlDoc.getElementsByTagName('Contents'));
+
           console.log(`Batch ${requestCount}: Found ${contents.length} objects`);
 
           contents.forEach((content) => {
             const key = content.getElementsByTagName('Key')[0]?.textContent;
             const size = parseInt(content.getElementsByTagName('Size')[0]?.textContent || '0', 10);
+
             const lastModified = new Date(
               content.getElementsByTagName('LastModified')[0]?.textContent || '',
             );
@@ -494,8 +494,10 @@ const search = async (query, { kind = 'image', apiKey, settings = {}, userName, 
 
           // Check if there are more objects to fetch
           const isTruncated = xmlDoc.getElementsByTagName('IsTruncated')[0]?.textContent === 'true';
+
           if (isTruncated) {
             const nextToken = xmlDoc.getElementsByTagName('NextContinuationToken')[0]?.textContent;
+
             continuationToken = nextToken;
             console.log(
               `More objects available, continuation token: ${nextToken?.substring(0, 20)}...`,
@@ -518,7 +520,6 @@ const search = async (query, { kind = 'image', apiKey, settings = {}, userName, 
 
       /** @type {ExternalAsset[]} */
       const assets = [];
-
       // Use the custom domain for URLs if specified, otherwise use the base URL
       const urlBase = customDomain || baseUrl;
 
@@ -559,10 +560,10 @@ const search = async (query, { kind = 'image', apiKey, settings = {}, userName, 
       });
 
       // Sort assets by last modified date in reverse chronological order (newest first)
-      assets.sort((a, b) => {
+      assets.sort((a, b) => 
         // For files, sort by lastModified date (newest first)
-        return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
-      });
+         new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
+      );
 
       console.log(`Processed ${assets.length} assets, returning newest first`);
       return assets;
@@ -583,13 +584,12 @@ const search = async (query, { kind = 'image', apiKey, settings = {}, userName, 
  */
 
 /**
- * Process an XML response from an S3/R2 list objects request
- *
- * @param {Response} response The fetch response
- * @param {string} baseUrl The base URL for objects
- * @param {string} prefixPath The current prefix path
- * @param {string} searchPrefix The search prefix to filter results
- * @returns {Promise<ExternalAsset[]>} Parsed assets
+ * Process an XML response from an S3/R2 list objects request.
+ * @param {Response} response The fetch response.
+ * @param {string} baseUrl The base URL for objects.
+ * @param {string} prefixPath The current prefix path.
+ * @param {string} searchPrefix The search prefix to filter results.
+ * @returns {Promise<ExternalAsset[]>} Parsed assets.
  */
 const processListResponse = async (response, baseUrl, prefixPath, searchPrefix) => {
   try {
@@ -597,11 +597,9 @@ const processListResponse = async (response, baseUrl, prefixPath, searchPrefix) 
     const text = await response.text();
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(text, 'application/xml');
-
     // Extract object keys
     const contents = Array.from(xmlDoc.getElementsByTagName('Contents'));
     const prefixes = Array.from(xmlDoc.getElementsByTagName('CommonPrefixes'));
-
     /** @type {ExternalAsset[]} */
     const assets = [];
 
@@ -609,6 +607,7 @@ const processListResponse = async (response, baseUrl, prefixPath, searchPrefix) 
     contents.forEach((content) => {
       const key = content.getElementsByTagName('Key')[0]?.textContent;
       const size = parseInt(content.getElementsByTagName('Size')[0]?.textContent || '0', 10);
+
       const lastModified = new Date(
         content.getElementsByTagName('LastModified')[0]?.textContent || '',
       );
@@ -701,9 +700,9 @@ const processListResponse = async (response, baseUrl, prefixPath, searchPrefix) 
  * @param {object} options Options.
  * @param {string} options.apiKey Combined credentials in format "accountId:accessKeyId:accessKeySecret:bucketName:bucketRegion:customDomain".
  * @param {object} [options.settings] Optional R2 media library settings.
- * @param {boolean} [options.settings.publicPath=true] Whether to use a public URL path.
+ * @param {boolean} [options.settings.publicPath] Whether to use a public URL path.
  * @param {string} [options.settings.customDomain] Custom domain to use for URLs.
- * @param {string} [options.settings.pathPrefix=''] Prefix to add to uploaded files.
+ * @param {string} [options.settings.pathPrefix] Prefix to add to uploaded files.
  * @returns {Promise<ExternalAsset[]>} Uploaded assets.
  */
 const upload = async (files, { apiKey, settings = {} }) => {
