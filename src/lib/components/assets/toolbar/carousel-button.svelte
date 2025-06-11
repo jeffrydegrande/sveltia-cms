@@ -1,7 +1,7 @@
 <script>
   import { Alert, Button, Dialog, Toast } from '@sveltia/ui';
   import { _ } from 'svelte-i18n';
-  import { getAssetPublicURL } from '$lib/services/assets';
+  import { getAssetPublicURL, selectedAssets, focusedAsset } from '$lib/services/assets';
 
   /**
    * @import { Asset } from '$lib/types/private';
@@ -25,19 +25,49 @@
   const toast = $state({ show: false, text: '', status: 'success' });
   let dialogOpen = $state(false);
 
-  // Use derived values like the original working version
-  const imageAssets = $derived(assets.filter(asset => asset.kind === 'image'));
+  // Access stores directly to avoid reactivity timing issues
+  const currentAssets = $derived.by(() => {
+    return $selectedAssets.length ? $selectedAssets : ($focusedAsset ? [$focusedAsset] : []);
+  });
+
+  const imageAssets = $derived.by(() => {
+    const filtered = currentAssets.filter(asset => asset.kind === 'image');
+    console.log('Filtering assets:', {
+      input: currentAssets.map(a => ({ name: a.name, kind: a.kind })),
+      output: filtered.map(a => ({ name: a.name, kind: a.kind }))
+    });
+    return filtered;
+  });
   const hasImages = $derived(imageAssets.length > 0);
+
+  // Debug logging to see what's happening
+  $effect(() => {
+    console.log('Carousel Debug (direct stores):', {
+      selectedAssetsLength: $selectedAssets.length,
+      focusedAsset: !!$focusedAsset,
+      totalAssets: currentAssets.length,
+      imageAssets: imageAssets.length,
+      assetNames: currentAssets.map(a => a.name),
+      assetKinds: currentAssets.map(a => ({ name: a.name, kind: a.kind })),
+      hasImages
+    });
+  });
   
   // Make carousel code reactive to current selection
   const carouselCode = $derived.by(() => {
-    if (!hasImages) return '';
+    // Get fresh assets to avoid timing issues
+    const freshAssets = $selectedAssets.length ? $selectedAssets : ($focusedAsset ? [$focusedAsset] : []);
+    const freshImageAssets = freshAssets.filter(asset => asset.kind === 'image');
+    
+    console.log('Generating carousel code for:', freshImageAssets.map(a => a.name));
+    if (freshImageAssets.length === 0) return '';
     
     const lines = ['{{< carousel >}}'];
     
     // eslint-disable-next-line no-restricted-syntax
-    for (const asset of imageAssets) {
+    for (const asset of freshImageAssets) {
       const publicURL = getAssetPublicURL(asset, { pathOnly: true });
+      console.log('Asset:', asset.name, 'URL:', publicURL);
 
       if (publicURL) {
         lines.push(publicURL);
@@ -45,6 +75,7 @@
     }
     
     lines.push('{{< /carousel >}}');
+    console.log('Final carousel code:', lines.join('\n'));
     return lines.join('\n');
   });
 

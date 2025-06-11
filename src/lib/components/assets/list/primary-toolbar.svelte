@@ -21,6 +21,11 @@
   import { isMediumScreen, isSmallScreen } from '$lib/services/user/env';
 
   const assets = $derived.by(() => {
+    console.log('Primary toolbar assets derivation:', {
+      selectedAssetsLength: $selectedAssets.length,
+      focusedAsset: !!$focusedAsset,
+      selectedAssetNames: $selectedAssets.map(a => a.name)
+    });
     if ($selectedAssets.length) return $selectedAssets;
     if ($focusedAsset) return [$focusedAsset];
     return [];
