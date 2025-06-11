@@ -621,7 +621,7 @@ export const strings = {
   },
 
   // Editorial Workflow
-  status: {
+  workflow_status: {
     drafts: 'Drafts',
     in_review: 'In Review',
     ready: 'Ready',

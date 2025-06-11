@@ -1,7 +1,7 @@
 <script>
   import { Alert, Button, Dialog, Toast } from '@sveltia/ui';
   import { _ } from 'svelte-i18n';
-  import { getAssetDetails, getAssetPublicURL } from '$lib/services/assets';
+  import { getAssetPublicURL } from '$lib/services/assets';
 
   /**
    * @import { Asset } from '$lib/types/private';
@@ -37,8 +37,10 @@
   const generateCarouselCode = async () => {
     const lines = ['{{< carousel >}}'];
     
+    // eslint-disable-next-line no-restricted-syntax
     for (const asset of imageAssets) {
       const publicURL = getAssetPublicURL(asset, { pathOnly: true });
+
       if (publicURL) {
         lines.push(publicURL);
       }
@@ -143,10 +145,5 @@
     margin: 0;
     white-space: pre-wrap;
     word-break: break-word;
-  }
-
-  .copy-button-container {
-    display: flex;
-    justify-content: flex-end;
   }
 </style>
