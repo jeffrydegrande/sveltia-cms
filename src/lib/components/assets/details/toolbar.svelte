@@ -1,6 +1,7 @@
 <script>
   import { Toolbar, TruncatedText } from '@sveltia/ui';
   import { _ } from 'svelte-i18n';
+  import CarouselButton from '$lib/components/assets/toolbar/carousel-button.svelte';
   import CopyAssetsButton from '$lib/components/assets/toolbar/copy-assets-button.svelte';
   import DeleteAssetsButton from '$lib/components/assets/toolbar/delete-assets-button.svelte';
   import DownloadAssetsButton from '$lib/components/assets/toolbar/download-assets-button.svelte';
@@ -15,6 +16,7 @@
 </script>
 
 {#snippet overflowButtons()}
+  <CarouselButton {assets} {useButton} />
   <CopyAssetsButton {assets} {useButton} />
   <DownloadAssetsButton {assets} {useButton} />
   <DeleteAssetsButton

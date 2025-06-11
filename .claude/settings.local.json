@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(pnpm check:svelte:*)",
+      "Bash(pnpm check:prettier:*)",
+      "Bash(pnpm install:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": false
+}
